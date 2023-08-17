@@ -1,16 +1,28 @@
 import Header from "./Header/Header.jsx";
 import Main from "./Main/Main.jsx";
 import Footer from "./Footer/Footer.jsx";
-import ImagePopup from "./ImagePopup/ImagePopup.jsx";
-import { useCallback, useEffect, useState } from "react";
 import CurrentUserContext from "../contexts/CurrentUserContext.js";
+// Импорт компонентов Реакт
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+// Импорт Попапов
 import EditProfilePopup from "./EditProfilePopup/EditProfilePopup.jsx";
 import EditAvatarPopup from "./EditAvatarPopup/EditAvatarPopup.jsx";
 import EditDeletePopup from "./EditDeletePopup/EditDeletePopup.jsx";
 import AddPlacePopup from "./AddPlacePopup/AddPlacePopup.jsx";
+import ImagePopup from "./ImagePopup/ImagePopup.jsx";
+// Импорт новых компонентов для 12ПР
+import InfoTooltip from "./InfoTooltip/InfoTooltip.jsx";
+import ProtectedRoute from "./ProtectedRoute/ProtectedRoute.jsx";
+import Login from "./Login/Login.jsx";
+import Register from "./Register/Register.jsx";
+// Импорт утилсов
+import * as auth from "../utils/auth.js";
 import api from "../utils/api.js";
 
+
 function App() {
+  const navigate = useNavigate();
   // Попапы
   const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = useState(false);
   const [isAddPlacePopupOpen, setIsEditAddPlacePopupOpen] = useState(false);
@@ -18,11 +30,21 @@ function App() {
   const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState({});
   const [isImgPopup, setImgPopup] = useState(false);
-  //
+  const [isInfoTooltip, setIsInfoTooltip] = useState({
+    isOpen: false,
+    isSucessfull: false,
+  });
+
+
+  // Инфо о пользователе
   const [currentUser, setCurrentUser] = useState({});
   // Попап карточек
   const [cards, setCards] = useState([]);
   const [deleteCardId, setDeleteCardId] = useState("");
+  
+  // Авторизация юзера
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [email, setEmail] = useState("");
 
   const closePopups = useCallback(() => {
     setIsEditProfilePopupOpen(false);
@@ -30,8 +52,14 @@ function App() {
     setIsEditAvatarPopupOpen(false);
     setImgPopup(false);
     setDeletePopupOpen(false);
+    setIsInfoTooltip({
+      isOpen: false,
+      isSucessfull: false,
+    });
   }, []);
 
+   
+// Реализация закрытия попапов на Esc и оверлей
   const isSomePopupOpen =
     isEditProfilePopupOpen ||
     isAddPlacePopupOpen ||
@@ -52,6 +80,70 @@ function App() {
       };
     }
   }, [isSomePopupOpen]);
+
+ //Проверка токена и перенаправление юзера
+ useEffect(() => {
+  checkToken();
+}, []);
+
+function checkToken() {
+  const token = localStorage.getItem("token");
+  if (token) {
+    auth
+      .getUser(token)
+      .then((res) => {
+        if (res) {
+          setEmail(res.data.email);
+          handleLoggedIn();
+          navigate("/");
+        }
+      })
+      .catch((err) => console.error(`Упс..., произошла ошибка ${err}`));
+      };
+  }
+
+  function handleRegister(password, email) {
+    auth
+      .register(password, email)
+      .then((res) => {
+        if (res) {
+          handleInfoTooltip(true);
+          navigate("/sign-in");
+        }
+      })
+      .catch((err) => console.error(`Упс..., произошла ошибка ${err}`));
+  }
+
+  function handleInfoTooltip(effect) {
+    setIsInfoTooltip({ ...isInfoTooltip, isOpen: true, isSucessfull: effect });
+  }
+
+  function handleExit() {
+    localStorage.removeItem("token");
+    setLoggedIn(false);
+    setEmail("");
+    navigate("/sign-in");
+  }
+
+  function handleLogin(password, email) {
+    auth
+      .authorization(password, email)
+      .then((data) => {
+        if (data.token) {
+          setEmail(email);
+          setLoggedIn(true);
+          localStorage.setItem("token", data.token);
+          navigate("/");
+        }
+      })
+      .catch((err) => console.error(`Упс..., произошла ошибка ${err}`));
+  }
+
+
+  function handleLoggedIn() {
+    setLoggedIn(true);
+  }
+
 
   function handleEditProfileClick() {
     setIsEditProfilePopupOpen(true);
@@ -122,7 +214,7 @@ function App() {
         .then((res) => {
           setCards((state) => state.map((c) => (c._id === card._id ? res : c)));
         })
-        .catch((err) => console.error(err));
+        .catch((err) => console.error(`Упс..., произошла ошибка ${err}`));
     } else {
       api
         .addLikeCard(card._id)
@@ -132,6 +224,7 @@ function App() {
         .catch((err) => console.error(`Упс..., произошла ошибка ${err}`));
     }
   }
+
 
   useEffect(() => {
     Promise.all([api.getInitialCards(), api.getCards()])
@@ -155,16 +248,35 @@ function App() {
   return (
     <CurrentUserContext.Provider value={currentUser}>
       <div className="page__container">
-        <Header />
-        <Main
-          oneEditProfile={handleEditProfileClick}
-          onAddPlace={handleAddPlaceClick}
-          onEditAvatar={handleEditAvatarClick}
-          onCardClick={handleCardClick}
-          onCardDelete={handleDeletePopupClick}
-          onCardLike={handleCardLike}
-          cards={cards}
-        />
+        
+        <Header email={email} exit={handleExit} loggedIn={loggedIn}/>
+        <Routes>
+          <Route path="/sign-in" element={<Login onLogin={handleLogin} />} />
+          <Route
+            path="/sign-up"
+            element={<Register onRegister={handleRegister} />}
+          />
+          <Route
+            path="*"
+            element={<Navigate to={loggedIn ? "/" : "/sign-in"} />}
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute
+                component={Main}
+                loggedIn={loggedIn}
+                onEditProfile={handleEditProfileClick}
+                onAddPlace={handleAddPlaceClick}
+                onEditAvatar={handleEditAvatarClick}
+                onCardClick={handleCardClick}
+                onCardDelete={ handleDeletePopupClick}
+                onCardLike={handleCardLike}
+                cards={cards}
+              />
+            }
+            />
+            </Routes>
         <Footer />
 
         <EditProfilePopup
@@ -196,8 +308,34 @@ function App() {
           isOpen={isImgPopup}
           onClose={closePopups}
         />
+           <InfoTooltip effect={isInfoTooltip} onClose={closePopups} />
       </div>
     </CurrentUserContext.Provider>
   );
-}
-export default App;
+  }
+  export default App;
+  
+     
+      
+
+  
+
+
+    
+
+ 
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
