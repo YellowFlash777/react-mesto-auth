@@ -3,7 +3,7 @@ import { useContext } from "react";
 import CurrentUserContext from "../../contexts/CurrentUserContext";
 
 export default function Main({
-  oneEditProfile,
+  onEditProfile,
   onEditAvatar,
   onAddPlace,
   onCardClick,
@@ -32,7 +32,7 @@ export default function Main({
               <button
                 className="profile__edit-button"
                 type="button"
-                onClick={oneEditProfile}
+                onClick={onEditProfile}
               />
             </div>
             <p className="profile__text profile__text-job">

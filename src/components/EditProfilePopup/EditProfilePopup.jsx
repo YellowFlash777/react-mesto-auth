@@ -20,7 +20,13 @@ export default function EditProfilePopup({ isOpen, onClose, onUpdateUser}) {
      name,
      about
   })}
+  const handleChangeNameProfile = e => {
+    setName(e.target.value);
+}
 
+const handleChangeDescription = e => {
+   setAbout(e.target.value);
+}
 
   return (
     <PopupWithForm
@@ -41,7 +47,7 @@ export default function EditProfilePopup({ isOpen, onClose, onUpdateUser}) {
         minLength={2}
         maxLength={40}
         value={name || ''} 
-        onChange={(evt) => setName(evt.target.value)}
+        onChange={handleChangeNameProfile}
       />
       <span className="popup__error popup__error_type_name" />
     </label>
@@ -56,7 +62,7 @@ export default function EditProfilePopup({ isOpen, onClose, onUpdateUser}) {
         minLength={2}
         maxLength={200}
         value={about || ''}
-        onChange={(evt) => setAbout(evt.target.value)}
+        onChange={handleChangeDescription}
       />
       <span className="popup__error popup__error_type_description" />
     </label>

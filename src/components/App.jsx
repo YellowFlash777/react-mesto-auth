@@ -65,6 +65,7 @@ function App() {
     isAddPlacePopupOpen ||
     isDeletePopupOpen ||
     isEditAvatarPopupOpen ||
+    isInfoTooltip ||
     isImgPopup;
 
   useEffect(() => {
@@ -111,7 +112,9 @@ function checkToken() {
           navigate("/sign-in");
         }
       })
-      .catch((err) => console.error(`Упс..., произошла ошибка ${err}`));
+      .catch((err) => {console.error(err);
+        handleInfoTooltip(false);
+      });
   }
 
   function handleInfoTooltip(effect) {
